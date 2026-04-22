@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 public class Board extends JPanel implements Pieces {
     private Piece[][] pieces;
     private static Piece selectedPiece = new Empty(-1, -1);
+    private boolean isBlackTurn;
 
     public Piece getPiece(int x, int y) {
         return pieces[y][x];
@@ -91,7 +92,7 @@ public class Board extends JPanel implements Pieces {
                 int x = e.getX() / 100;
                 int y = e.getY() / 100;
                 if (selectedPiece.isEmpty) {//player did not click a piece yet
-                    if (!pieces[y][x].isEmpty) {
+                    if (pieces[y][x].isBlack==isBlackTurn) {
                         selectedPiece = pieces[y][x];
                         drawPossibleMove(selectedPiece,getGraphics());
                         getGraphics().drawImage(selectedPiece.image,selectedPiece.x*100+10,selectedPiece.y*100+10,null);
@@ -101,6 +102,7 @@ public class Board extends JPanel implements Pieces {
                     if (isValidMove(selectedPiece, x, y)) {//check is redundant
                         movePiece(selectedPiece, x, y);
                         selectedPiece = new Empty();
+                        isBlackTurn =!isBlackTurn;
                         MainWindow.window.repaint();
                     } else{
                         selectedPiece=new Empty();
