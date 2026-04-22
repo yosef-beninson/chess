@@ -7,40 +7,128 @@ public class Board extends JPanel implements Pieces {
     private Piece[][] pieces;
     private static Piece selectedPiece = new Empty(-1, -1);
     private boolean isBlackTurn;
+    private boolean blackInCheck;
+    private boolean whiteInCheck;
+    private static boolean isCheckMate_Black;
+    private static boolean isCheckMate_White;
 
-    public Piece getPiece(int x, int y) {
-        return pieces[y][x];
+    public static boolean kingAvoidsCheck(Piece[][] pieces, Piece king, int moveTo) {
+        Piece[][] temp = Pieces.newCopyOfPieces(pieces);
+        Piece tempKing = Pieces.newCopyOfPiece(king);
+        int[] kingCanMoveTo = tempKing.canMoveTo(temp);
+        for (int i = 0; i < kingCanMoveTo.length; i++) {
+            if (kingCanMoveTo[i]==moveTo)
+                break;
+            if (i==kingCanMoveTo.length-1)
+                return false;
+        }
+        temp[moveTo % 10][moveTo / 10] = tempKing;
+        temp[tempKing.y][tempKing.x] = new Empty();
+        tempKing.x =moveTo/10;
+        tempKing.y =moveTo%10;
+        if (!isInCheck(temp, tempKing.isBlack))
+            return true;
+        return false;
+    }
+    public static boolean kingCanAvoidsCheck(Piece[][] pieces, Piece king){
+        int[] kingCanMoveTo = king.canMoveTo(pieces);
+        for (int i = 0; i < kingCanMoveTo.length; i++) {
+            if (kingAvoidsCheck(pieces,king,kingCanMoveTo[i]))
+                return true;
+        }
+        return false;
+    }
+    public static boolean piecesCanProtectKing(Piece[][] pieces, Piece kingToCheck){
+        Piece[][] temp = Pieces.newCopyOfPieces(pieces);
+        Piece king = Pieces.newCopyOfPiece(kingToCheck);
+        Piece defender;
+        int[] defenderCanMoveTo;
+        for (int i = 0; i < temp.length; i++) {
+            for (int j = 0; j < temp.length; j++) {
+                defender = temp[j][i];
+                if (!king.isOpponent(defender)){
+                    defenderCanMoveTo =defender.canMoveTo(pieces);
+                    for (int k = 0; k < defenderCanMoveTo.length; k++) {
+                        temp[defenderCanMoveTo[k]%10][defenderCanMoveTo[k]/10] = defender;
+                        temp[j][i] = new Empty();
+                        if (!isInCheck(temp,defender.isBlack))
+                            return true;
+                    }
+                }
+            }
+        }return false;
     }
 
-    public Piece[][] getPieces() {
-        return pieces;
-    }
-
-    public boolean isValidMove(Piece toMove, int x, int y) {
+    public static boolean isValidMove(Piece[][] pieces,Piece toMove, int x, int y) {
         int[] canMoveTo = toMove.canMoveTo(pieces);
-        for (int i = 0; i < canMoveTo.length; i++) {
-            if (canMoveTo[i] == (10 * x + y)) {
+        int[] validMoves = validMoves(pieces, toMove, canMoveTo);
+        for (int i = 0; i < validMoves.length; i++) {
+            if (validMoves[i] == (10 * x + y)) {
                 return true;
             }
         }
         return false;
     }
 
+    private static int[] validMoves(Piece[][] pieces, Piece check, int[] canMoveTo) {
+        Piece[][] temp;
+        Piece toCheck;
+        int moveX;
+        int moveY;
+        int count = canMoveTo.length;
+        if (check.isKing) {
+            for (int i = 0; i < canMoveTo.length; i++) {
+                if (!kingAvoidsCheck(pieces, check, canMoveTo[i]))
+                    canMoveTo[i] = -1;
+            }
+        }
+        if (!check.isKing) {
+            for (int i = 0; i < canMoveTo.length; i++) {
+                temp = Pieces.newCopyOfPieces(pieces);
+                toCheck = Pieces.newCopyOfPiece(check);
+                moveX = canMoveTo[i] / 10;
+                moveY = canMoveTo[i] % 10;
+                temp[moveY][moveX] = toCheck;
+                temp[check.y][check.x] = new Empty();
+                if (isInCheck(temp, check.isBlack))
+                    canMoveTo[i] = -1;
+            }
+        }
+        for (int i = 0; i < canMoveTo.length; i++) {
+            if (canMoveTo[i] == -1) {
+                count--;
+            }
+        }
+        int[] validMoves = new int[count];
+        int index = 0;
+        for (int i = 0; i < canMoveTo.length; i++) {
+            if (canMoveTo[i] != -1) {
+                validMoves[index] = canMoveTo[i];
+                index++;
+            }
+        }
+//        if (check.isKing&&validMoves.length==0&&!piecesCanProtectKing(pieces,check)){
+//            if (check.isBlack)
+//                isCheckMate_Black =true;
+//            else isCheckMate_White = true;
+//        }
+        return validMoves;
+    }
+
     public void movePiece(Piece piece, int x, int y) {
-        if (!isValidMove(piece, x, y))
+        if (!isValidMove(pieces,piece, x, y))
             return;
-        pieces[piece.y][piece.x] = new Empty(piece.x, piece.y);
+        pieces[piece.y][piece.x] = new Empty();
         piece.setX(x);
         piece.setY(y);
-        if (piece.getClass()== WhitePawn.class&&y==0)
-            pieces[y][x]=new WhiteQueen(x,y);
-        else if (piece.getClass()==BlackPawn.class&&y==7)
-            pieces[y][x]=new BlackQueen(x,y);
+        if (piece.getClass() == WhitePawn.class && y == 0)
+            pieces[y][x] = new WhiteQueen(x, y);
+        else if (piece.getClass() == BlackPawn.class && y == 7)
+            pieces[y][x] = new BlackQueen(x, y);
         else pieces[y][x] = piece;
-
-
     }
-    private void setDefaultPieces(){
+
+    private void setDefaultPieces() {
         pieces = new Piece[8][8];
 
         pieces[0] = new Piece[]{new BlackRook(0, 0), new BlackKnight(1, 0), new BlackBishop(2, 0), new BlackQueen(3, 0), new BlackKing(4, 0), new BlackBishop(5, 0), new BlackKnight(6, 0), new BlackRook(7, 0)};
@@ -52,32 +140,62 @@ public class Board extends JPanel implements Pieces {
         }
         pieces[6] = new Piece[]{new WhitePawn(0, 6), new WhitePawn(1, 6), new WhitePawn(2, 6), new WhitePawn(3, 6), new WhitePawn(4, 6), new WhitePawn(5, 6), new WhitePawn(6, 6), new WhitePawn(7, 6)};
         pieces[7] = new Piece[]{new WhiteRook(0, 7), new WhiteKnight(1, 7), new WhiteBishop(2, 7), new WhiteQueen(3, 7), new WhiteKing(4, 7), new WhiteBishop(5, 7), new WhiteKnight(6, 7), new WhiteRook(7, 7)};
-
     }
-    private void drawPossibleMove(Piece piece,Graphics g){
+
+    private void drawPossibleMove(Piece piece, Graphics g) {
         g.setColor(Color.getHSBColor(0.1875F, 0.6732673F, 0.7921569F));
-        int x=-1;
-        int y=-1;
-        int [] canMoveTo = piece.canMoveTo(pieces);
-        if (piece.x%2==0&&piece.y%2==0)
+        int x = -1;
+        int y = -1;
+        int[] canMoveTo = piece.canMoveTo(pieces);
+        if (piece.x % 2 == 0 && piece.y % 2 == 0)
             g.setColor(Color.getHSBColor(0.17361112F, 0.1182266F, 0.79607844F));
-        else if (piece.x%2==1&&piece.y%2==1)
+        else if (piece.x % 2 == 1 && piece.y % 2 == 1)
             g.setColor(Color.getHSBColor(0.17361112F, 0.1182266F, 0.79607844F));
         else g.setColor(Color.getHSBColor(0.1875F, 0.6732673F, 0.7921569F));
-        g.fillRect(piece.x*100,piece.y*100,100,100);
+        g.fillRect(piece.x * 100, piece.y * 100, 100, 100);
         for (int i = 0; i < canMoveTo.length; i++) {
-            x=canMoveTo[i]/10;
-            y=canMoveTo[i]%10;
-            if (x%2==0&&y%2==0)
+            x = canMoveTo[i] / 10;
+            y = canMoveTo[i] % 10;
+            if (x % 2 == 0 && y % 2 == 0)
                 g.setColor(Color.getHSBColor(0.17361112F, 0.1182266F, 0.79607844F));
-            else if (x%2==1&&y%2==1)
+            else if (x % 2 == 1 && y % 2 == 1)
                 g.setColor(Color.getHSBColor(0.17361112F, 0.1182266F, 0.79607844F));
             else g.setColor(Color.getHSBColor(0.1875F, 0.6732673F, 0.7921569F));
 //            g.fillRect(100*x,100*y,100,100);
-            g.fillRoundRect(100*x,100*y,20,20,30,30);
+            g.fillRoundRect(100 * x, 100 * y, 20, 20, 30, 30);
         }
 
 
+    }
+
+    public static int getKingPosition(Piece[][] pieces, boolean black) {
+        int kingPos = -1;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (pieces[j][i].isKing && pieces[j][i].isBlack == black) {
+                    kingPos = pieces[j][i].x * 10 + pieces[j][i].y;
+                    return kingPos;
+                }
+
+            }
+        }
+        return kingPos;
+    }
+
+    public static boolean isInCheck(Piece[][] pieces, boolean black) {
+        int kingPos = getKingPosition(pieces, black);
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (pieces[j][i].isBlack != black) {
+                    int[] enemyMovement = pieces[j][i].canMoveTo(pieces);
+                    for (int k = 0; k < enemyMovement.length; k++) {
+                        if (enemyMovement[k] == kingPos)
+                            return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public Board() {
@@ -92,27 +210,41 @@ public class Board extends JPanel implements Pieces {
                 int x = e.getX() / 100;
                 int y = e.getY() / 100;
                 if (selectedPiece.isEmpty) {//player did not click a piece yet
-                    if (pieces[y][x].isBlack==isBlackTurn) {
+                    if (pieces[y][x].isBlack == isBlackTurn) {
                         selectedPiece = pieces[y][x];
-                        drawPossibleMove(selectedPiece,getGraphics());
-                        getGraphics().drawImage(selectedPiece.image,selectedPiece.x*100+10,selectedPiece.y*100+10,null);
+                        drawPossibleMove(selectedPiece, getGraphics());
+                        getGraphics().drawImage(selectedPiece.image, selectedPiece.x * 100 + 10, selectedPiece.y * 100 + 10, null);
 
                     }
-                } else if (!selectedPiece.isEmpty){
-                    if (isValidMove(selectedPiece, x, y)) {//check is redundant
+                } else if (!selectedPiece.isEmpty) {
+                    if (isValidMove(pieces,selectedPiece, x, y)) {//check is redundant
                         movePiece(selectedPiece, x, y);
+                        blackInCheck = isInCheck(pieces, true);//checks if black is checked
+                        if (blackInCheck){
+                            int kingPos = getKingPosition(pieces,true);
+                            if (!kingCanAvoidsCheck(pieces,pieces[kingPos%10][kingPos/10]))
+                                if (!piecesCanProtectKing(pieces,pieces[kingPos%10][kingPos/10]))
+                                    isCheckMate_Black = true;
+                        }
+                        whiteInCheck = isInCheck(pieces, false);
+                        if (whiteInCheck){
+                            int kingPos = getKingPosition(pieces,true);
+                            if (!kingCanAvoidsCheck(pieces,pieces[kingPos%10][kingPos/10])){
+                                if (!piecesCanProtectKing(pieces,pieces[kingPos%10][kingPos/10]))
+                                    isCheckMate_White = true;
+                            }
+                        }
                         selectedPiece = new Empty();
-                        isBlackTurn =!isBlackTurn;
+                        isBlackTurn = !isBlackTurn;
                         MainWindow.window.repaint();
-                    } else{
-                        selectedPiece=new Empty();
+                    } else {
+                        selectedPiece = new Empty();
                         MainWindow.window.repaint();
                     }
-                        //add later that turn continues
                 }
             }
         });
-        }
+    }
 
 
     @Override
@@ -133,11 +265,27 @@ public class Board extends JPanel implements Pieces {
                 g.fillRect(i * 100, j * 100, 100, 100);
             }
         }
+        int kingPos = -1;
+        if (blackInCheck) {
+            kingPos = getKingPosition(pieces, true);
+            g.setColor(Color.getHSBColor(0.030465951F, 0.84931505F, 0.85882354F));
+            g.fillRect((kingPos / 10) * 100, (kingPos % 10) * 100, 100, 100);
+        }
+        if (whiteInCheck) {
+            kingPos = getKingPosition(pieces, false);
+            g.setColor(Color.getHSBColor(0.030465951F, 0.84931505F, 0.85882354F));
+            g.fillRect((kingPos / 10) * 100, (kingPos % 10) * 100, 100, 100);
+        }
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 g.drawImage(pieces[i][j].image, j * 100 + 20, i * 100 + 20, null);
             }
         }
-
+        if (isCheckMate_Black){
+            System.out.println("check mate black");
+        }
+        if (isCheckMate_White){
+            System.out.println("check mate white");
+        }
     }
 }

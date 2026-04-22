@@ -9,6 +9,12 @@ public interface Pieces {
         protected int y;
         boolean isBlack;
         boolean isEmpty;
+        boolean isKing;
+        boolean isQueen;
+        boolean isBishop;
+        boolean isKnight;
+        boolean isRook;
+        boolean isPawn;
         Image image;
 
         public void setX(int x) {
@@ -17,6 +23,10 @@ public interface Pieces {
 
         public void setY(int y) {
             this.y = y;
+        }
+
+        public void setImage(Image image) {
+            this.image = image;
         }
 
         abstract int[] canMoveTo(Piece[][] pieces);
@@ -31,6 +41,7 @@ public interface Pieces {
             return false;
         }
     }
+
     class Empty extends Piece {
         public Empty(int x, int y) {
             this.x = x;
@@ -40,12 +51,57 @@ public interface Pieces {
 
         public Empty() {
             isEmpty = true;
+            x = -1;
+            y = -1;
         }
 
         @Override
         int[] canMoveTo(Piece[][] pieces) {
             return new int[0];
         }
+    }
+
+    public static Piece newCopyOfPiece(Piece piece){
+        Piece piece1;
+        if (piece.isPawn){
+            if (piece.isBlack)
+                return new BlackPawn(piece.x,piece.y);
+            else return new WhitePawn(piece.x,piece.y);
+        }
+        if (piece.isRook){
+            if (piece.isBlack)
+                return new BlackRook(piece.x,piece.y);
+            else return new WhiteRook(piece.x,piece.y);
+        }
+        if (piece.isKnight){
+            if (piece.isBlack)
+                return new BlackKnight(piece.x,piece.y);
+            else return new WhiteKnight(piece.x,piece.y);
+        }
+        if (piece.isBishop){
+            if (piece.isBlack)
+                return new BlackBishop(piece.x,piece.y);
+            else return new WhiteBishop(piece.x,piece.y);
+        }
+        if (piece.isKing){
+            if (piece.isBlack)
+                return new BlackKing(piece.x,piece.y);
+            else return new WhiteKing(piece.x,piece.y);
+        }
+        if (piece.isQueen){
+            if (piece.isBlack)
+                return new BlackQueen(piece.x,piece.y);
+            else return new WhiteQueen(piece.x,piece.y);
+        }
+        return new Empty();
+    }
+    public static Piece[][] newCopyOfPieces(Piece[][] pieces){
+        Piece[][] temp = new Piece[pieces.length][pieces.length];
+        for (int i = 0; i < temp.length; i++) {
+            for (int j = 0; j < temp.length; j++) {
+                temp[j][i]=newCopyOfPiece(pieces[j][i]);
+            }
+        }return temp;
     }
 
     public static Piece checkSquare(Piece[][] board, int x, int y) {
@@ -144,6 +200,7 @@ public interface Pieces {
                 break;
             } else break;
         }
+
         return canMoveTo;
     }
 
@@ -243,12 +300,11 @@ public interface Pieces {
         int count = 0;
         for (int i = 1; i < 8; i++) {
             if (x + i < 8 && y + i < 8) {
-                boolean isEmpty= checkSquare(pieces, x + i, y + i).isEmpty;
+                boolean isEmpty = checkSquare(pieces, x + i, y + i).isEmpty;
                 if (checkSquare(pieces, x + i, y + i).isEmpty) {
                     count++;
                     continue;
-                }
-                else if (checkSquare(pieces, x + i, y + i).isOpponent(piece)) {
+                } else if (checkSquare(pieces, x + i, y + i).isOpponent(piece)) {
                     count++;
                     break;
                 } else break;//if is a white piece
@@ -424,6 +480,9 @@ public interface Pieces {
                 index++;
             }
         }
+//        for (int i = 0; i < canMoveTo.length; i++) {
+//            if (Board.isInCheck())
+//        }
         return canMoveTo;
     }
 
@@ -443,8 +502,7 @@ public interface Pieces {
         return queenMoves;
     }
 
-
-    class BlackPawn extends Pieces.Piece {
+    class BlackPawn extends Piece {
 
         {
             try {
@@ -458,6 +516,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isPawn = true;
         }
 
         @Override
@@ -523,6 +582,7 @@ public interface Pieces {
         public WhitePawn(int x, int y) {
             this.x = x;
             this.y = y;
+            isPawn = true;
         }
 
         int[] canMoveTo(Piece[][] pieces) {
@@ -587,6 +647,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isRook = true;
         }
 
         @Override
@@ -608,6 +669,8 @@ public interface Pieces {
         public WhiteRook(int x, int y) {
             this.x = x;
             this.y = y;
+            isRook = true;
+
         }
 
         @Override
@@ -630,6 +693,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isKnight =true;
         }
 
         @Override
@@ -651,6 +715,7 @@ public interface Pieces {
         public WhiteKnight(int x, int y) {
             this.x = x;
             this.y = y;
+            isKnight =true;
         }
 
         @Override
@@ -674,6 +739,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isBishop = true;
         }
 
         @Override
@@ -695,6 +761,7 @@ public interface Pieces {
         public WhiteBishop(int x, int y) {
             this.x = x;
             this.y = y;
+            isBishop = true;
         }
 
         int[] canMoveTo(Piece[][] pieces) {
@@ -716,6 +783,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isKing = true;
         }
 
         @Override
@@ -737,6 +805,7 @@ public interface Pieces {
         public WhiteKing(int x, int y) {
             this.x = x;
             this.y = y;
+            isKing = true;
         }
 
         int[] canMoveTo(Piece[][] pieces) {
@@ -758,6 +827,7 @@ public interface Pieces {
             this.x = x;
             this.y = y;
             isBlack = true;
+            isQueen =true;
         }
 
         int[] canMoveTo(Piece[][] pieces) {
@@ -778,6 +848,7 @@ public interface Pieces {
         public WhiteQueen(int x, int y) {
             this.x = x;
             this.y = y;
+            isQueen =true;
         }
 
         int[] canMoveTo(Piece[][] pieces) {
