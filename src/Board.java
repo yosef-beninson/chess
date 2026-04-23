@@ -12,6 +12,34 @@ public class Board extends JPanel implements Pieces {
     private static boolean isCheckMate_Black;
     private static boolean isCheckMate_White;
     private boolean gameOver;
+    private boolean staleMate;
+
+    private static boolean isStaleMate(Piece[][] pieces,Piece king) {
+        if (kingCanMove(pieces, king.isBlack))
+            return false;
+        if (canMovePieces(pieces, king.isBlack))
+            return false;
+        return true;
+    }
+
+    //for debug perposes only
+    private void setModified() {
+        pieces = new Piece[8][8];
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 2; j++) {
+                pieces[j][i] = new Empty();
+            }
+        }
+        pieces[0][0] = new BlackKing(0, 0);
+        for (int i = 2; i < 6; i++) {//for every row = y
+            for (int j = 0; j < 8; j++) {//for every line = x
+                pieces[i][j] = new Empty(j, i);
+            }
+        }
+        pieces[6] = new Piece[]{new Empty(0, 6), new WhitePawn(1, 6), new WhitePawn(2, 6), new WhitePawn(3, 6), new WhitePawn(4, 6), new WhitePawn(5, 6), new WhitePawn(6, 6), new Empty(7, 6)};
+        pieces[7] = new Piece[]{new WhiteRook(0, 7), new WhiteKnight(1, 7), new WhiteBishop(2, 7), new WhiteQueen(3, 7), new WhiteKing(4, 7), new WhiteBishop(5, 7), new WhiteKnight(6, 7), new WhiteRook(7, 7)};
+
+    }
 
     public static boolean kingAvoidsCheck(Piece[][] pieces, Piece king, int moveTo) {
         Piece[][] temp = Pieces.newCopyOfPieces(pieces);
@@ -68,11 +96,50 @@ public class Board extends JPanel implements Pieces {
         return false;
     }
 
+    public static boolean kingCanMove(Piece[][] pieces, boolean black) {
+        int kingPosition = getKingPosition(pieces, black);
+        Piece king = Pieces.newCopyOfPiece(pieces[kingPosition % 10][kingPosition / 10]);
+        Piece[][] temp = Pieces.newCopyOfPieces(pieces);
+        int[] kingMoves = king.canMoveTo(temp);
+        if (kingMoves.length == 0)
+            return false;
+        for (int i = 0; i < kingMoves.length; i++) {
+            moveTempPiece(temp, king, kingMoves[i]);
+            if (!isInCheck(temp, king.isBlack))
+                return true;
+        }
+        return false;
+    }
+
+    public static boolean canMovePieces(Piece[][] pieces, boolean black) {
+        Piece[][] temp = Pieces.newCopyOfPieces(pieces);
+        Piece defender;
+        for (int i = 0; i < temp.length; i++) {
+            for (int j = 0; j < temp.length; j++) {
+                defender = temp[j][i];
+                if (defender.isKing)
+                    continue;
+                if (defender.isBlack == black) {
+                    int[] defenderMoves = defender.canMoveTo(temp);
+                    for (int k = 0; k < defenderMoves.length; k++) {
+                        moveTempPiece(temp, defender, defenderMoves[k]);
+                        if (!isInCheck(temp, defender.isBlack))
+                            return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     public static boolean isValidMove(Piece[][] pieces, Piece toMove, int x, int y) {
         int[] canMoveTo = toMove.canMoveTo(pieces);
         int[] validMoves = validMoves(pieces, toMove, canMoveTo);
         for (int i = 0; i < validMoves.length; i++) {
             if (validMoves[i] == (10 * x + y)) {
+                Piece[][]  temp = Pieces.newCopyOfPieces(pieces);
+                Piece tempPiece = Pieces.newCopyOfPiece(toMove);
+                moveTempPiece(temp,tempPiece,x*10+y);
                 return true;
             }
         }
@@ -122,6 +189,15 @@ public class Board extends JPanel implements Pieces {
 //            else isCheckMate_White = true;
 //        }
         return validMoves;
+    }
+
+    public static void moveTempPiece(Piece[][] pieces, Piece piece, int moveTo) {
+        int moveX = moveTo / 10;
+        int moveY = moveTo % 10;
+        pieces[moveY][moveX] = piece;
+        pieces[piece.y][piece.x] = new Empty();
+        piece.setX(moveX);
+        piece.setY(moveY);
     }
 
     public void movePiece(Piece piece, int x, int y) {
@@ -210,7 +286,9 @@ public class Board extends JPanel implements Pieces {
     public Board() {
         JPanel board = new JPanel();
         board.setBounds(0, 0, 800, 800);
-        setDefaultPieces();
+        pieces = new Piece[0][0];
+//        setDefaultPieces();
+        setModified();
         board.setFocusable(true);
         board.grabFocus();
         addMouseListener(new MouseAdapter() {
@@ -245,6 +323,9 @@ public class Board extends JPanel implements Pieces {
                             if (!kingCanAvoidsCheck(pieces, pieces[kingPos % 10][kingPos / 10]) && (!piecesCanProtectKing(pieces, pieces[kingPos % 10][kingPos / 10])))
                                 isCheckMate_White = true;
                         }
+                        int pos = getKingPosition(pieces,!isBlackTurn);
+                        staleMate = isStaleMate(pieces,pieces[pos%10][pos/10]);
+                        System.out.println(staleMate);
                         selectedPiece = new Empty();
                         isBlackTurn = !isBlackTurn;
                         MainWindow.window.repaint();
@@ -261,7 +342,6 @@ public class Board extends JPanel implements Pieces {
     @Override
     public void paint(Graphics g) {
         super.paint(g);
-//    System.out.println("painting board");
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (i % 2 == 1) {
@@ -291,6 +371,15 @@ public class Board extends JPanel implements Pieces {
             for (int j = 0; j < 8; j++) {
                 g.drawImage(pieces[i][j].image, j * 100 + 20, i * 100 + 20, null);
             }
+        }
+        if (staleMate){
+            if (!gameOver){//to make sure it only triggers once
+                new PlaySound("res/sounds/draw1.wav");
+                gameOver=true;
+            }
+            g.setColor(Color.black);
+            g.setFont(new Font("David", Font.BOLD, 30));
+            g.drawString("stale mate", getWidth() / 2 - 80, getHeight() / 2 - 5);
         }
         if (isCheckMate_Black) {
             if (!gameOver) {
