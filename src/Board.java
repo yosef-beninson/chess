@@ -11,55 +11,64 @@ public class Board extends JPanel implements Pieces {
     private boolean whiteInCheck;
     private static boolean isCheckMate_Black;
     private static boolean isCheckMate_White;
+    private boolean gameOver;
 
     public static boolean kingAvoidsCheck(Piece[][] pieces, Piece king, int moveTo) {
         Piece[][] temp = Pieces.newCopyOfPieces(pieces);
         Piece tempKing = Pieces.newCopyOfPiece(king);
         int[] kingCanMoveTo = tempKing.canMoveTo(temp);
         for (int i = 0; i < kingCanMoveTo.length; i++) {
-            if (kingCanMoveTo[i]==moveTo)
+            if (kingCanMoveTo[i] == moveTo)
                 break;
-            if (i==kingCanMoveTo.length-1)
+            if (i == kingCanMoveTo.length - 1)
                 return false;
         }
         temp[moveTo % 10][moveTo / 10] = tempKing;
         temp[tempKing.y][tempKing.x] = new Empty();
-        tempKing.x =moveTo/10;
-        tempKing.y =moveTo%10;
+        tempKing.x = moveTo / 10;
+        tempKing.y = moveTo % 10;
         if (!isInCheck(temp, tempKing.isBlack))
             return true;
         return false;
     }
-    public static boolean kingCanAvoidsCheck(Piece[][] pieces, Piece king){
+
+    public static boolean kingCanAvoidsCheck(Piece[][] pieces, Piece king) {
         int[] kingCanMoveTo = king.canMoveTo(pieces);
         for (int i = 0; i < kingCanMoveTo.length; i++) {
-            if (kingAvoidsCheck(pieces,king,kingCanMoveTo[i]))
+            if (kingAvoidsCheck(pieces, king, kingCanMoveTo[i]))
                 return true;
         }
         return false;
     }
-    public static boolean piecesCanProtectKing(Piece[][] pieces, Piece kingToCheck){
+
+    public static boolean piecesCanProtectKing(Piece[][] pieces, Piece kingToCheck) {//i think it has a problem
         Piece[][] temp = Pieces.newCopyOfPieces(pieces);
         Piece king = Pieces.newCopyOfPiece(kingToCheck);
         Piece defender;
         int[] defenderCanMoveTo;
         for (int i = 0; i < temp.length; i++) {
+            temp = Pieces.newCopyOfPieces(pieces);
             for (int j = 0; j < temp.length; j++) {
+                temp = Pieces.newCopyOfPieces(pieces);
                 defender = temp[j][i];
-                if (!king.isOpponent(defender)){
-                    defenderCanMoveTo =defender.canMoveTo(pieces);
+                if (king.isBlack == defender.isBlack && !defender.isKing) {
+                    defenderCanMoveTo = defender.canMoveTo(pieces);
                     for (int k = 0; k < defenderCanMoveTo.length; k++) {
-                        temp[defenderCanMoveTo[k]%10][defenderCanMoveTo[k]/10] = defender;
+                        temp = Pieces.newCopyOfPieces(pieces);
+                        temp[defenderCanMoveTo[k] % 10][defenderCanMoveTo[k] / 10] = defender;
+                        defender.x = defenderCanMoveTo[k] / 10;
+                        defender.y = defenderCanMoveTo[k] % 10;
                         temp[j][i] = new Empty();
-                        if (!isInCheck(temp,defender.isBlack))
+                        if (!isInCheck(temp, defender.isBlack))
                             return true;
                     }
                 }
             }
-        }return false;
+        }
+        return false;
     }
 
-    public static boolean isValidMove(Piece[][] pieces,Piece toMove, int x, int y) {
+    public static boolean isValidMove(Piece[][] pieces, Piece toMove, int x, int y) {
         int[] canMoveTo = toMove.canMoveTo(pieces);
         int[] validMoves = validMoves(pieces, toMove, canMoveTo);
         for (int i = 0; i < validMoves.length; i++) {
@@ -116,7 +125,7 @@ public class Board extends JPanel implements Pieces {
     }
 
     public void movePiece(Piece piece, int x, int y) {
-        if (!isValidMove(pieces,piece, x, y))
+        if (!isValidMove(pieces, piece, x, y))
             return;
         pieces[piece.y][piece.x] = new Empty();
         piece.setX(x);
@@ -209,6 +218,8 @@ public class Board extends JPanel implements Pieces {
             public void mousePressed(MouseEvent e) {
                 int x = e.getX() / 100;
                 int y = e.getY() / 100;
+                if (gameOver)
+                    return;
                 if (selectedPiece.isEmpty) {//player did not click a piece yet
                     if (pieces[y][x].isBlack == isBlackTurn) {
                         selectedPiece = pieces[y][x];
@@ -217,22 +228,22 @@ public class Board extends JPanel implements Pieces {
 
                     }
                 } else if (!selectedPiece.isEmpty) {
-                    if (isValidMove(pieces,selectedPiece, x, y)) {//check is redundant
+                    if (isValidMove(pieces, selectedPiece, x, y)) {//check is redundant
+                        if (pieces[y][x].isEmpty)
+                            new PlaySound("res/sounds/movePiece.wav");
+                        else new PlaySound("res/sounds/eatPiece.wav");
                         movePiece(selectedPiece, x, y);
                         blackInCheck = isInCheck(pieces, true);//checks if black is checked
-                        if (blackInCheck){
-                            int kingPos = getKingPosition(pieces,true);
-                            if (!kingCanAvoidsCheck(pieces,pieces[kingPos%10][kingPos/10]))
-                                if (!piecesCanProtectKing(pieces,pieces[kingPos%10][kingPos/10]))
-                                    isCheckMate_Black = true;
+                        if (blackInCheck) {
+                            int kingPos = getKingPosition(pieces, true);
+                            if (!kingCanAvoidsCheck(pieces, pieces[kingPos % 10][kingPos / 10]) && !piecesCanProtectKing(pieces, pieces[kingPos % 10][kingPos / 10]))
+                                isCheckMate_Black = true;
                         }
                         whiteInCheck = isInCheck(pieces, false);
-                        if (whiteInCheck){
-                            int kingPos = getKingPosition(pieces,true);
-                            if (!kingCanAvoidsCheck(pieces,pieces[kingPos%10][kingPos/10])){
-                                if (!piecesCanProtectKing(pieces,pieces[kingPos%10][kingPos/10]))
-                                    isCheckMate_White = true;
-                            }
+                        if (whiteInCheck) {
+                            int kingPos = getKingPosition(pieces, false);
+                            if (!kingCanAvoidsCheck(pieces, pieces[kingPos % 10][kingPos / 10]) && (!piecesCanProtectKing(pieces, pieces[kingPos % 10][kingPos / 10])))
+                                isCheckMate_White = true;
                         }
                         selectedPiece = new Empty();
                         isBlackTurn = !isBlackTurn;
@@ -250,7 +261,7 @@ public class Board extends JPanel implements Pieces {
     @Override
     public void paint(Graphics g) {
         super.paint(g);
-        System.out.println("painting board");
+//    System.out.println("painting board");
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (i % 2 == 1) {
@@ -281,11 +292,23 @@ public class Board extends JPanel implements Pieces {
                 g.drawImage(pieces[i][j].image, j * 100 + 20, i * 100 + 20, null);
             }
         }
-        if (isCheckMate_Black){
-            System.out.println("check mate black");
+        if (isCheckMate_Black) {
+            if (!gameOver) {
+                new PlaySound("res/sounds/gameDone.wav");
+                gameOver = true;
+            }
+            g.setColor(Color.black);
+            g.setFont(new Font("David", Font.BOLD, 30));
+            g.drawString("White wins", getWidth() / 2 - 80, getHeight() / 2 - 5);
         }
-        if (isCheckMate_White){
-            System.out.println("check mate white");
+        if (isCheckMate_White) {
+            if (!gameOver) {
+                new PlaySound("res/sounds/gameDone.wav");
+                gameOver = true;
+            }
+            g.setColor(Color.black);
+            g.setFont(new Font("David", Font.BOLD, 30));
+            g.drawString("Black wins", getWidth() / 2 - 80, getHeight() / 2 - 5);
         }
     }
 }
