@@ -1,14 +1,14 @@
 import javax.swing.*;
-import java.awt.*;
-import java.util.Arrays;
 
 public class MainWindow {
+    final public int WindowWidth =800;
+    final public int WindowHeight =800;
     public static JFrame window = new JFrame();
 
     public MainWindow(){
         window.setResizable(false);
         window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        window.setSize(800,800);
+        window.setSize(WindowWidth,WindowHeight);
         window.repaint();
         Board gameBoard = new Board();
         window.add(gameBoard);
