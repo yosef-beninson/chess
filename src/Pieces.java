@@ -15,6 +15,7 @@ public interface Pieces {
         boolean isKnight;
         boolean isRook;
         boolean isPawn;
+        boolean moved; //for castling
         Image image;
 
         public void setX(int x) {
@@ -61,7 +62,7 @@ public interface Pieces {
         }
     }
 
-    public static Piece newCopyOfPiece(Piece piece){
+    static Piece newCopyOfPiece(Piece piece){
         Piece piece1;
         if (piece.isPawn){
             if (piece.isBlack)
@@ -95,7 +96,7 @@ public interface Pieces {
         }
         return new Empty();
     }
-    public static Piece[][] newCopyOfPieces(Piece[][] pieces){
+    static Piece[][] newCopyOfPieces(Piece[][] pieces){
         Piece[][] temp = new Piece[pieces.length][pieces.length];
         for (int i = 0; i < temp.length; i++) {
             for (int j = 0; j < temp.length; j++) {
@@ -104,7 +105,7 @@ public interface Pieces {
         }return temp;
     }
 
-    public static Piece checkSquare(Piece[][] board, int x, int y) {
+    static Piece checkSquare(Piece[][] board, int x, int y) {
         return board[y][x];
     }
 
@@ -429,6 +430,10 @@ public interface Pieces {
             if (checkSquare(pieces, x - 1, y - 1).isEmpty || checkSquare(pieces, x - 1, y - 1).isOpponent(piece))
                 count++;
         }
+        if (kingCanShortCastle(pieces,piece))
+            count++;
+        if (kingCanLongCastle(pieces,piece))
+            count++;
         int[] canMoveTo = new int[count];
         int index = 0;
 
@@ -480,9 +485,13 @@ public interface Pieces {
                 index++;
             }
         }
-//        for (int i = 0; i < canMoveTo.length; i++) {
-//            if (Board.isInCheck())
-//        }
+        if (kingCanShortCastle(pieces,piece)) {
+            canMoveTo[index] = (piece.x + 2) * 10 + piece.y;
+            index++;
+        }if (kingCanLongCastle(pieces,piece)) {
+            canMoveTo[index] = (piece.x - 2) * 10 + piece.y;
+            index++;
+        }
         return canMoveTo;
     }
 
@@ -502,6 +511,35 @@ public interface Pieces {
         return queenMoves;
     }
 
+    private static boolean kingCanShortCastle(Piece[][] pieces, Piece king) {
+        if (king.moved)
+            return false;
+        if (!king.isKing)
+            return false;
+        if (king.x!=4)//dont know why its needed but it would give error out of bounds without it
+            return false;
+        if (pieces[king.y][king.x + 1].isEmpty && pieces[king.y][king.x + 2].isEmpty)//short castle, o-o
+            if (pieces[king.y][king.x + 3].isBlack == king.isBlack && pieces[king.y][king.x + 3].isRook && !pieces[king.y][king.x + 3].moved) {
+                return true;
+            }
+        return false;
+    }
+    private static boolean kingCanLongCastle(Piece[][] pieces, Piece king) {
+        if (king.moved)
+            return false;
+        if (!king.isKing)
+            return false;
+        if (king.x!=4)//dont know why its needed, but it would give error out of bounds without it
+            return false;
+        for (int i = 1; i <4 ; i++) {
+            if (!pieces[king.y][king.x-i].isEmpty)
+                return false;
+        }
+        if (pieces[king.y][king.x -4].isBlack == king.isBlack && pieces[king.y][king.x -4].isRook && !pieces[king.y][king.x -4].moved) {
+            return true;
+        }
+        return false;
+    }
     class BlackPawn extends Piece {
 
         {
