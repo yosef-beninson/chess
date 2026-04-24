@@ -18,21 +18,16 @@ public interface Pieces {
         boolean moved; //for castling
         Image image;
 
+        abstract int[] canMoveTo(Piece[][] pieces);
+
         public void setX(int x) {
             this.x = x;
         }
-
         public void setY(int y) {
             this.y = y;
         }
 
-        public void setImage(Image image) {
-            this.image = image;
-        }
-
-        abstract int[] canMoveTo(Piece[][] pieces);
-
-        public boolean isOpponent(Piece otherPiece) {
+        private boolean isOpponent(Piece otherPiece) {
             if (this.isEmpty || otherPiece.isEmpty)
                 return false;
             if (this.isBlack && !otherPiece.isBlack)
@@ -40,25 +35,6 @@ public interface Pieces {
             if (otherPiece.isBlack && !this.isBlack)
                 return true;
             return false;
-        }
-    }
-
-    class Empty extends Piece {
-        public Empty(int x, int y) {
-            this.x = x;
-            this.y = y;
-            this.isEmpty = true;
-        }
-
-        public Empty() {
-            isEmpty = true;
-            x = -1;
-            y = -1;
-        }
-
-        @Override
-        int[] canMoveTo(Piece[][] pieces) {
-            return new int[0];
         }
     }
 
@@ -70,9 +46,16 @@ public interface Pieces {
             else return new WhitePawn(piece.x,piece.y);
         }
         if (piece.isRook){
-            if (piece.isBlack)
-                return new BlackRook(piece.x,piece.y);
-            else return new WhiteRook(piece.x,piece.y);
+            if (piece.isBlack){
+                piece1 = new BlackRook(piece.x,piece.y);
+                piece1.moved = piece.moved;
+                return piece1;
+            }
+            else{
+                piece1= new WhiteRook(piece.x,piece.y);
+                piece1.moved = piece.moved;
+                return piece1;
+            }
         }
         if (piece.isKnight){
             if (piece.isBlack)
@@ -85,9 +68,16 @@ public interface Pieces {
             else return new WhiteBishop(piece.x,piece.y);
         }
         if (piece.isKing){
-            if (piece.isBlack)
-                return new BlackKing(piece.x,piece.y);
-            else return new WhiteKing(piece.x,piece.y);
+            if (piece.isBlack){
+                piece1 = new BlackKing(piece.x,piece.y);
+                piece1.moved =piece.moved;
+                return piece1;
+            }
+            else{
+                piece1 = new WhiteKing(piece.x,piece.y);
+                piece1.moved =piece.moved;
+                return piece1;
+            }
         }
         if (piece.isQueen){
             if (piece.isBlack)
@@ -105,7 +95,37 @@ public interface Pieces {
         }return temp;
     }
 
-    static Piece checkSquare(Piece[][] board, int x, int y) {
+    private static boolean kingCanShortCastle(Piece[][] pieces, Piece king) {
+        if (king.moved)
+            return false;
+        if (!king.isKing)
+            return false;
+        if (king.x!=4)//dont know why its needed but it would give error out of bounds without it
+            return false;
+        if (pieces[king.y][king.x + 1].isEmpty && pieces[king.y][king.x + 2].isEmpty)//short castle, o-o
+            if (pieces[king.y][king.x + 3].isBlack == king.isBlack && pieces[king.y][king.x + 3].isRook && !pieces[king.y][king.x + 3].moved) {
+                return true;
+            }
+        return false;
+    }
+    private static boolean kingCanLongCastle(Piece[][] pieces, Piece king) {
+        if (king.moved)
+            return false;
+        if (!king.isKing)
+            return false;
+        if (king.x!=4)//dont know why its needed, but it would give error out of bounds without it
+            return false;
+        for (int i = 1; i <4 ; i++) {
+            if (!pieces[king.y][king.x-i].isEmpty)
+                return false;
+        }
+        if (pieces[king.y][king.x -4].isBlack == king.isBlack && pieces[king.y][king.x -4].isRook && !pieces[king.y][king.x -4].moved) {
+            return true;
+        }
+        return false;
+    }
+
+    private static Piece checkSquare(Piece[][] board, int x, int y) {
         return board[y][x];
     }
 
@@ -511,35 +531,27 @@ public interface Pieces {
         return queenMoves;
     }
 
-    private static boolean kingCanShortCastle(Piece[][] pieces, Piece king) {
-        if (king.moved)
-            return false;
-        if (!king.isKing)
-            return false;
-        if (king.x!=4)//dont know why its needed but it would give error out of bounds without it
-            return false;
-        if (pieces[king.y][king.x + 1].isEmpty && pieces[king.y][king.x + 2].isEmpty)//short castle, o-o
-            if (pieces[king.y][king.x + 3].isBlack == king.isBlack && pieces[king.y][king.x + 3].isRook && !pieces[king.y][king.x + 3].moved) {
-                return true;
-            }
-        return false;
-    }
-    private static boolean kingCanLongCastle(Piece[][] pieces, Piece king) {
-        if (king.moved)
-            return false;
-        if (!king.isKing)
-            return false;
-        if (king.x!=4)//dont know why its needed, but it would give error out of bounds without it
-            return false;
-        for (int i = 1; i <4 ; i++) {
-            if (!pieces[king.y][king.x-i].isEmpty)
-                return false;
+
+
+    class Empty extends Piece {
+        public Empty(int x, int y) {
+            this.x = x;
+            this.y = y;
+            this.isEmpty = true;
         }
-        if (pieces[king.y][king.x -4].isBlack == king.isBlack && pieces[king.y][king.x -4].isRook && !pieces[king.y][king.x -4].moved) {
-            return true;
+
+        public Empty() {
+            isEmpty = true;
+            x = -1;
+            y = -1;
         }
-        return false;
+
+        @Override
+        int[] canMoveTo(Piece[][] pieces) {
+            return new int[0];
+        }
     }
+
     class BlackPawn extends Piece {
 
         {
