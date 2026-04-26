@@ -182,6 +182,8 @@ public class Board extends JPanel implements Pieces {
 
     private static boolean isValidMove(Piece[][] pieces, Piece toMove, int x, int y) {
         int[] canMoveTo = toMove.canMoveTo(pieces);
+        if (canMoveTo.length==0)
+            return false;
         for (int i = 0; i < canMoveTo.length; i++) {
             if (canMoveTo[i]==10*x+y)
                 break;
@@ -201,10 +203,12 @@ public class Board extends JPanel implements Pieces {
         int moveY = moveTo % 10;
         if (piece.isKing) {
             if (moveTo / 10 != piece.x - 1 && moveTo / 10 != piece.x + 1) {//player is castling
-                if (moveTo / 10 == piece.x + 2)//short castle
-                    moveTempPiece(pieces, pieces[piece.y][piece.x + 3], moveTo - 10);
-                if (moveTo / 10 == piece.x - 2)//long castle
-                    moveTempPiece(pieces, pieces[piece.y][piece.x + 3], moveTo + 10);
+                if (!(piece.x + 3 > 7)) {
+                    if (moveTo / 10 == piece.x + 2)//short castle
+                        moveTempPiece(pieces, pieces[piece.y][piece.x + 3], moveTo - 10);
+                    if (moveTo / 10 == piece.x - 2)//long castle
+                        moveTempPiece(pieces, pieces[piece.y][piece.x + 3], moveTo + 10);
+                }
             }
         }
         pieces[moveY][moveX] = piece;
